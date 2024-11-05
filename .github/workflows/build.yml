@@ -1,0 +1,82 @@
+name: Build
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    permissions:
+      contents: write
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    
+    - name: Get API Core
+      run: |
+        cd ../
+        git clone https://github.com/oylsister/CS2GamingAPI.git
+        git clone https://github.com/Ganter1234/Shop-Core.git
+        cd CS2Gaming-ShopItem
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build
+      run: dotnet build --no-restore
+
+    # Get version from .cs file
+    - name: Get Version
+      run: |
+        version=$(grep 'public override string ModuleVersion =>' /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/Plugin.cs | sed 's/.*=> "\(.*\)";/\1/')
+        version_under=${version// /_}
+        version_minus=${version// /-}
+        short_sha=$(echo $GITHUB_SHA | cut -c1-7)
+        tag=$(echo $version_minus | tr '[:upper:]' '[:lower:]')
+        file_ver=$(echo $version_under | tr '[:upper:]' '[:lower:]')
+        echo "VERSION=$version" >> $GITHUB_ENV
+        echo "VERSION_UNDER=$version_under" >> $GITHUB_ENV
+        echo "VERSION_MINUS=$version_minus" >> $GITHUB_ENV
+        echo "SHORT_SHA=$short_sha" >> $GITHUB_ENV
+        echo "TAG=$tag" >> $GITHUB_ENV
+        echo "FILE_VER=$file_ver" >> $GITHUB_ENV
+    
+    # gather all file in for release
+    - name: Prepare Directory
+      run: | 
+        # make main folder
+        mkdir -p release/ShopItem
+
+        # Copy all plugins files
+        cp /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/bin/Debug/net8.0/ShopRestriction.dll release/ShopItem
+        cp /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/bin/Debug/net8.0/ShopRestriction.pdb release/ShopItem
+        cp /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/bin/Debug/net8.0/Newtonsoft.Json.dll release/ShopItem
+
+        cp -r /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/build/lang/ release/ShopItem
+
+    # artifact for user to getting a file.
+    - uses: actions/upload-artifact@v4
+      with:
+        name: ShopItem-${{ env.SHORT_SHA }}
+        path: release/
+
+    # zip file
+    - name: Zip File
+      run: |
+        cd release
+        zip -r "RunningMan_${{ env.FILE_VER }}.zip" RunningMan
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ env.TAG }}
+        name: ${{ env.VERSION }}
+        files: release/RunningMan_${{ env.FILE_VER }}.zip
