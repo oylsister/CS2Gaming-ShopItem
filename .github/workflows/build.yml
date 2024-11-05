@@ -72,7 +72,7 @@ jobs:
     - name: Zip File
       run: |
         cd release
-        zip -r "ShopItem_${{ env.FILE_VER }}.zip" RunningMan
+        zip -r "ShopItem_${{ env.FILE_VER }}.zip" ShopItem
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2
