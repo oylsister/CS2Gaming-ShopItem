@@ -1,4 +1,4 @@
-﻿namespace ShopRestriction
+﻿namespace ShopItem
 {
     public class PlayerData 
     {

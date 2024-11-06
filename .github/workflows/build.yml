@@ -3,8 +3,12 @@ name: Build
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+      - 'README.md' # Exclude changes to README.md
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+      - 'README.md' # Exclude changes to README.md
 
 jobs:
   build:
@@ -53,14 +57,14 @@ jobs:
     - name: Prepare Directory
       run: | 
         # make main folder
-        mkdir -p release/ShopRestriction
+        mkdir -p release/ShopItem
 
         # Copy all plugins files
-        cp /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/bin/Debug/net8.0/ShopRestriction.dll release/ShopRestriction
-        cp /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/bin/Debug/net8.0/ShopRestriction.pdb release/ShopRestriction
-        cp /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/bin/Debug/net8.0/Newtonsoft.Json.dll release/ShopRestriction
+        cp /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/bin/Debug/net8.0/ShopItem.dll release/ShopItem
+        cp /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/bin/Debug/net8.0/ShopItem.pdb release/ShopItem
+        cp /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/bin/Debug/net8.0/Newtonsoft.Json.dll release/ShopItem
 
-        cp -r /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/build/lang/ release/ShopRestriction
+        cp -r /home/runner/work/CS2Gaming-ShopItem/CS2Gaming-ShopItem/build/lang/ release/ShopItem
 
     # artifact for user to getting a file.
     - uses: actions/upload-artifact@v4
@@ -72,7 +76,7 @@ jobs:
     - name: Zip File
       run: |
         cd release
-        zip -r "ShopItem_${{ env.FILE_VER }}.zip" ShopRestriction
+        zip -r "ShopItem_${{ env.FILE_VER }}.zip" ShopItem
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v2

@@ -11,12 +11,17 @@ using Newtonsoft.Json;
 using ShopAPI;
 using static CounterStrikeSharp.API.Core.Listeners;
 
-namespace ShopRestriction
+namespace ShopItem
 {
-    public class Plugin : BasePlugin
+    public class ItemSetting : BasePluginConfig
     {
-        public override string ModuleName => "[Shop] Restriction";
-        public override string ModuleVersion => "1.0";
+        public int ItemPrice { get; set; } = 5000;
+    }
+
+    public class Plugin : BasePlugin, IPluginConfig<ItemSetting>
+    {
+        public override string ModuleName => "[Shop] Item";
+        public override string ModuleVersion => "1.1";
 
         private ICS2GamingAPIShared? _cs2gamingAPI { get; set; }
         private IShopApi? _shopAPI { get; set; }
@@ -24,11 +29,17 @@ namespace ShopRestriction
         public Dictionary<CCSPlayerController, PlayerData> _playerBought { get; set; } = new();
         public string? filePath { get; set; }
         public readonly ILogger<Plugin> _logger;
+        public ItemSetting Config { get; set; } = new();
 
         public override void Load(bool hotReload)
         {
             RegisterListener<OnClientDisconnect>(OnClientDisconnect);
             InitializeData();
+        }
+
+        public void OnConfigParsed(ItemSetting config)
+        {
+            Config = config;
         }
 
         public override void OnAllPluginsLoaded(bool hotReload)
@@ -42,7 +53,13 @@ namespace ShopRestriction
                 return;
             }
 
-            _shopAPI.ClientBuyItemPre += OnClientBuyItem;
+            if(Config == null)
+            {
+                _logger.LogInformation("Config is null!");
+                return;
+            }
+
+            AddItemToShopMenu();
         }
 
         public Plugin(ILogger<Plugin> logger)
@@ -86,11 +103,13 @@ namespace ShopRestriction
                 var timeReset = DateTime.ParseExact(data.TimeReset, "M/d/yyyy h:mm:ss tt", CultureInfo.InvariantCulture);
                 if (timeReset <= DateTime.Now)
                 {
+                    data.TimeAcheived = DateTime.Now.ToString();
+                    data.TimeReset = DateTime.Now.AddDays(7.0f).ToString();
                     bought = false;
                     Task.Run(async () => await SaveClientData(steamID, bought, true));
                 }
 
-                _playerBought.Add(client!, new(bought, DateTime.Now.ToString(), DateTime.Now.AddDays(7.0f).ToString()));
+                _playerBought.Add(client!, new(bought, data.TimeAcheived, data.TimeReset));
             }
 
             return HookResult.Continue;
@@ -111,15 +130,26 @@ namespace ShopRestriction
             _playerBought.Remove(client!);
         }
 
-        public HookResult? OnClientBuyItem(CCSPlayerController client, int ItemID, string CategoryName, string UniqueName, int BuyPrice, int SellPrice, int Duration, int Count)
+        public void AddItemToShopMenu()
+        {
+            if (Config == null || _shopAPI == null)
+                return;
+
+            _shopAPI.CreateCategory("CS2GamingItem", "CS2GamingItem");
+
+            Task.Run(async () => {
+                var item = await _shopAPI.AddItem("claimItem", "Claim CS2 Gaming Item", "CS2GamingItem", Config.ItemPrice, 0, 604800);
+                _shopAPI.SetItemCallbacks(item, OnClientBuyItem, OnClientSellItem, OnClientToggleItem);
+            }).Wait();
+        }
+
+        public HookResult OnClientBuyItem(CCSPlayerController client, int ItemID, string CategoryName, string UniqueName, int BuyPrice, int SellPrice, int Duration, int Count)
         {
             if (!_playerBought.ContainsKey(client))
                 return HookResult.Continue;
 
             if (_playerBought[client].Bought)
             {
-                var data = GetPlayerData(client.AuthorizedSteamID!.SteamId64);
-
                 var now = DateTime.Now;
                 var available = DateTime.ParseExact(_playerBought[client].TimeReset, "M/d/yyyy h:mm:ss tt", CultureInfo.InvariantCulture);
 
@@ -130,6 +160,18 @@ namespace ShopRestriction
             }
 
             OnItemBought(client);
+            return HookResult.Continue;
+        }
+
+        public HookResult OnClientSellItem(CCSPlayerController client, int itemId, string uniquename, int sellprice)
+        {
+            //client.PrintToChat($" {Localizer.ForPlayer(client, "Prefix")} This item cannot be sold!");
+            return HookResult.Continue;
+        }
+
+        public HookResult OnClientToggleItem(CCSPlayerController client, int itemId, string uniqueName, int state)
+        {
+            //client.PrintToChat($" {Localizer.ForPlayer(client, "Prefix")} This item cannot be toggled!");
             return HookResult.Continue;
         }
 

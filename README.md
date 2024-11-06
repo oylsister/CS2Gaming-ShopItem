@@ -5,6 +5,14 @@
 
 ## Requirement
 - [Shop-Core](https://github.com/Ganter1234/Shop-Core)
+- [CS2GamingAPI](https://github.com/oylsister/CS2GamingAPI/)
 
 ## Installation
-- Simply drag all content in zip file into ``addons/counterstrikesharp/plugins/
+- Simply drag all content in zip file into ``addons/counterstrikesharp/plugins/``
+
+ On plugin load to the server, this plugin will start generate config file at ``addons/counterstrikesharp/configs/plugins/ShopItem/ShopItem.json``
+ ```jsonc
+{
+  "ItemPrice": 5000 // price for purchase CS2GamingItem
+}
+ ```
